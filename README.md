@@ -31,6 +31,7 @@ Resources:
 - [**Get started**](https://clickhouse.uptrace.dev/guide/getting-started.html)
 - [Examples](https://github.com/uptrace/go-clickhouse/tree/master/example)
 - [Discussions](https://github.com/uptrace/go-clickhouse/discussions)
+- [Chat](https://discord.gg/rWtp5Aj)
 - [Reference](https://pkg.go.dev/github.com/uptrace/go-clickhouse/ch)
 - [Example app](https://github.com/uptrace/uptrace)
 
