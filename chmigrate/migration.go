@@ -1,4 +1,4 @@
-package migrate
+package chmigrate
 
 import (
 	"bufio"
@@ -49,7 +49,7 @@ func NewSQLMigrationFunc(fsys fs.FS, name string) MigrationFunc {
 		for scanner.Scan() {
 			b := scanner.Bytes()
 
-			const prefix = "--migrate:"
+			const prefix = "--migration:"
 			if bytes.HasPrefix(b, []byte(prefix)) {
 				b = b[len(prefix):]
 				if bytes.Equal(b, []byte("split")) {
@@ -88,7 +88,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/uptrace/ch"
+	"github.com/uptrace/go-clickhouse/ch"
 )
 
 func init() {
@@ -104,7 +104,7 @@ func init() {
 
 const sqlTemplate = `SELECT 1
 
---migrate:split
+--migration:split
 
 SELECT 2
 `

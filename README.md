@@ -3,33 +3,53 @@
 [![build workflow](https://github.com/uptrace/go-clickhouse/actions/workflows/build.yml/badge.svg)](https://github.com/uptrace/go-clickhouse/actions)
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/uptrace/go-clickhouse/ch)](https://pkg.go.dev/github.com/go-clickhouse/ch)
 [![Documentation](https://img.shields.io/badge/ch-documentation-informational)](https://clickhouse.uptrace.dev/)
+[![Chat](https://discordapp.com/api/guilds/752070105847955518/widget.png)](https://discord.gg/rWtp5Aj)
 
-This client uses native protocol to communicate with ClickHouse server. It requires Go 1.18+ in
-order to use generics. This is not a database/sql driver, but the API is similar.
+This client uses native protocol to communicate with ClickHouse server and requires Go 1.18+ in
+order to use generics. This is not a database/sql driver, but the API is compatible.
 
 Main features are:
 
-- Native protocol support.
-- `database/sql`-like API.
+- ClickHouse native protocol support and efficient column-oriented design.
+- API compatible with database/sql.
 - [Bun](https://github.com/uptrace/bun/)-like query builder.
 - [Selecting](https://clickhouse.uptrace.dev/guide/query-select.html) into scalars, structs, maps,
   slices of maps/structs/scalars.
-- Efficient [inserts](https://clickhouse.uptrace.dev/guide/query-insert.html#api).
-- `Array(*)` including nested arrays.
+- `Array(T)` including nested arrays.
 - Enums and `LowCardinality(String)`.
-- Migrations.
+- `Nullable(T)` except `Nullable(Array(T))`.
+- [Migrations](https://clickhouse.uptrace.dev/guide/migrations.html).
+- [OpenTelemetry](https://clickhouse.uptrace.dev/guide/monitoring.html) support.
+- In production at [Uptrace](https://uptrace.dev/)
 
-Not supported:
+Unsupported:
 
-- Nullable types.
+- Server timezones other than UTC.
 
 Resources:
 
 - [**Get started**](https://clickhouse.uptrace.dev/guide/getting-started.html)
 - [Examples](https://github.com/uptrace/go-clickhouse/tree/master/example)
 - [Discussions](https://github.com/uptrace/go-clickhouse/discussions)
+- [Chat](https://discord.gg/rWtp5Aj)
 - [Reference](https://pkg.go.dev/github.com/uptrace/go-clickhouse/ch)
 - [Example app](https://github.com/uptrace/uptrace)
+
+## Benchmark
+
+**Read** (best of 3 runs):
+
+| Library                                                                                                          | Timing |
+| ---------------------------------------------------------------------------------------------------------------- | ------ |
+| [This library](example/benchmark/read-native/main.go)                                                            | 655ms  |
+| [ClickHouse/clickhouse-go](https://github.com/ClickHouse/clickhouse-go/blob/v2/benchmark/v2/read-native/main.go) | 849ms  |
+
+**Write** (best of 3 runs):
+
+| Library                                                                                                                    | Timing |
+| -------------------------------------------------------------------------------------------------------------------------- | ------ |
+| [This library](example/benchmark/write-native-columnar/main.go)                                                            | 475ms  |
+| [ClickHouse/clickhouse-go](https://github.com/ClickHouse/clickhouse-go/blob/v2/benchmark/v2/write-native-columnar/main.go) | 881ms  |
 
 ## Example
 
@@ -44,7 +64,7 @@ import (
 	"time"
 
 	"github.com/uptrace/go-clickhouse/ch"
-	"github.com/uptrace/go-clickhouse/extra/chdebug"
+	"github.com/uptrace/go-clickhouse/chdebug"
 )
 
 type Model struct {

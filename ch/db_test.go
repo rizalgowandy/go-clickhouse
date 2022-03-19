@@ -3,16 +3,24 @@ package ch_test
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/uptrace/go-clickhouse/ch"
-	"github.com/uptrace/go-clickhouse/extra/chdebug"
+	"github.com/uptrace/go-clickhouse/chdebug"
 )
 
 func chDB(opts ...ch.Option) *ch.DB {
+	dsn := os.Getenv("CH")
+	if dsn == "" {
+		dsn = "clickhouse://localhost:9000/test?sslmode=disable"
+	}
+
+	opts = append(opts, ch.WithDSN(dsn))
 	db := ch.Connect(opts...)
 	db.AddQueryHook(chdebug.NewQueryHook(
 		chdebug.WithEnabled(false),
@@ -56,6 +64,70 @@ func TestCHTimeout(t *testing.T) {
 		require.NoError(t, err)
 		return num == 1
 	}, time.Second, 100*time.Millisecond)
+}
+
+func TestDSNSetting(t *testing.T) {
+	ctx := context.Background()
+
+	for _, value := range []int{0, 1} {
+		t.Run("prefer_column_name_to_alias=%d", func(t *testing.T) {
+			db := ch.Connect(ch.WithDSN(fmt.Sprintf(
+				"clickhouse://localhost:9000/default?sslmode=disable&prefer_column_name_to_alias=%d",
+				value,
+			)))
+			defer db.Close()
+
+			err := db.Ping(ctx)
+			require.NoError(t, err)
+
+			var got string
+
+			err = db.NewSelect().
+				ColumnExpr("value").
+				TableExpr("system.settings").
+				Where("name = 'prefer_column_name_to_alias'").
+				Scan(ctx, &got)
+			require.NoError(t, err)
+			require.Equal(t, got, fmt.Sprint(value))
+		})
+	}
+}
+
+func TestNullable(t *testing.T) {
+	ctx := context.Background()
+
+	db := chDB()
+	defer db.Close()
+
+	type Model struct {
+		Name      *string
+		CreatedAt time.Time `ch:",pk"`
+	}
+
+	err := db.ResetModel(ctx, (*Model)(nil))
+	require.NoError(t, err)
+
+	models := []Model{
+		{Name: strptr("hello"), CreatedAt: time.Unix(1e6, 0).Local()},
+		{Name: strptr(""), CreatedAt: time.Unix(1e6+1, 0).Local()},
+		{Name: nil, CreatedAt: time.Unix(1e6+2, 0).Local()},
+	}
+	_, err = db.NewInsert().Model(&models).Exec(ctx)
+	require.NoError(t, err)
+
+	var models2 []Model
+	err = db.NewSelect().Model(&models2).Scan(ctx)
+	require.NoError(t, err)
+	require.Equal(t, models, models2)
+
+	var ms []map[string]any
+	err = db.NewSelect().Model((*Model)(nil)).OrderExpr("created_at").Scan(ctx, &ms)
+	require.NoError(t, err)
+	require.Equal(t, []map[string]any{
+		{"name": "hello", "created_at": time.Unix(1e6, 0)},
+		{"name": "", "created_at": time.Unix(1e6+1, 0)},
+		{"name": nil, "created_at": time.Unix(1e6+2, 0)},
+	}, ms)
 }
 
 func TestPlaceholder(t *testing.T) {
@@ -396,4 +468,8 @@ func testORMInvalidEnumValue(t *testing.T, db *ch.DB) {
 	err = db.NewSelect().Model(dest).Scan(ctx)
 	require.NoError(t, err)
 	require.Equal(t, "invalid", dest.Kind)
+}
+
+func strptr(s string) *string {
+	return &s
 }

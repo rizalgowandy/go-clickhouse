@@ -1,4 +1,4 @@
-module github.com/uptrace/go-clickhouse/example/basic
+module github.com/uptrace/go-clickhouse/ch/internal/bench
 
 go 1.18
 
